@@ -15,6 +15,7 @@ import RegisterPage from "@/views/RegisterPage.vue";
 import SearchResultsPage from "@/views/SearchResultsPage.vue";
 import UserProfile_Favorite from "@/views/UserProfile_Favorite.vue";
 import TestPage from "@/views/TestPage.vue";
+import MapRoutePlanner from "@/components/Map/MapRounterPlanner.vue";
 
 
 // 定义路由关系
@@ -44,7 +45,7 @@ const routes = [
   {path: '/SearchResultsPage', name: 'SearchResultsPage', component: SearchResultsPage},
   {path: '/UserProfile_Favorite',name: 'UserProfile_Favorite',component: UserProfile_Favorite},
   {path: '/TestPage', name: 'TestPage', component: TestPage},
-
+  {path: '/map-test', name: 'MapRoutePlanner', component: MapRoutePlanner},
 
 ]
 
