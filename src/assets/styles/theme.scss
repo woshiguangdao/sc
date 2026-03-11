@@ -1,0 +1,10 @@
+@use 'variables' as v;
+
+body {
+  background: #f5f7fa;
+  color: #303133;
+  font-family: v.$font-stack;
+}
+
+.container { max-width: v.$container-max-width; margin: 0 auto; }
+
