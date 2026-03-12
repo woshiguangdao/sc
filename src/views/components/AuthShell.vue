@@ -1,30 +1,36 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
-import { message } from 'ant-design-vue'
-import { gsap } from 'gsap'
-import { userLogin } from '@/api/api'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
-const router = useRouter()
+const props = defineProps({
+  badge: {
+    type: String,
+    default: 'DianDian Life'
+  },
+  title: {
+    type: String,
+    required: true
+  },
+  subtitle: {
+    type: String,
+    default: ''
+  },
+  cardWidth: {
+    type: String,
+    default: '460px'
+  },
+  errorShake: {
+    type: Boolean,
+    default: false
+  }
+})
 
-const username = ref('')
-const password = ref('')
-const yanma = ref('')
-const yantext = ref('')
-const showPassword = ref(false)
-const result = ref()
-const loading = ref(false)
-const errorShake = ref(false)
-
-const captchaCanvasRef = ref(null)
-const particleCanvasRef = ref(null)
 const pageRef = ref(null)
-const cardRef = ref(null)
-const loginBtnRef = ref(null)
+const particleCanvasRef = ref(null)
 
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-const show_num = []
+const cardStyle = computed(() => ({
+  width: `min(92vw, ${props.cardWidth})`
+}))
 
 let particleCtx = null
 let particles = []
@@ -37,12 +43,8 @@ const mouse = {
   active: false
 }
 
-onMounted(async () => {
-  await nextTick()
-  drawCaptcha()
+onMounted(() => {
   initScene()
-  playEntranceAnimation()
-  bindMagnetButton()
 })
 
 onBeforeUnmount(() => {
@@ -59,210 +61,6 @@ onBeforeUnmount(() => {
     resizeObserver = null
   }
 })
-
-function togglePassword(e) {
-  e?.preventDefault?.()
-  showPassword.value = !showPassword.value
-}
-
-function playEntranceAnimation() {
-  if (prefersReducedMotion || !cardRef.value) return
-
-  gsap.from(cardRef.value, {
-    y: 28,
-    opacity: 0,
-    duration: 0.9,
-    ease: 'power3.out'
-  })
-
-  gsap.from('.login-form-item', {
-    y: 16,
-    opacity: 0,
-    duration: 0.6,
-    stagger: 0.07,
-    delay: 0.16,
-    ease: 'power2.out'
-  })
-}
-
-function bindMagnetButton() {
-  const btn = loginBtnRef.value
-  if (!btn || prefersReducedMotion) return
-
-  const maxMove = 10
-
-  const handleMove = (e) => {
-    const rect = btn.getBoundingClientRect()
-    const x = e.clientX - rect.left - rect.width / 2
-    const y = e.clientY - rect.top - rect.height / 2
-
-    gsap.to(btn, {
-      x: (x / rect.width) * maxMove,
-      y: (y / rect.height) * maxMove,
-      duration: 0.25,
-      ease: 'power2.out'
-    })
-  }
-
-  const handleLeave = () => {
-    gsap.to(btn, {
-      x: 0,
-      y: 0,
-      duration: 0.35,
-      ease: 'power3.out'
-    })
-  }
-
-  btn.addEventListener('mousemove', handleMove)
-  btn.addEventListener('mouseleave', handleLeave)
-}
-
-function triggerErrorShake() {
-  errorShake.value = false
-  requestAnimationFrame(() => {
-    errorShake.value = true
-    setTimeout(() => {
-      errorShake.value = false
-    }, 520)
-  })
-}
-
-function successBurst() {
-  if (prefersReducedMotion || !cardRef.value) return
-
-  gsap.timeline()
-    .to(cardRef.value, {
-      rotateY: 7,
-      scale: 1.014,
-      duration: 0.18,
-      ease: 'power2.out'
-    })
-    .to(cardRef.value, {
-      rotateY: 0,
-      scale: 1,
-      duration: 0.34,
-      ease: 'power3.out'
-    })
-}
-
-const login = () => {
-  const myuser = {
-    username: username.value,
-    password: password.value
-  }
-
-  loading.value = true
-
-  userLogin(myuser)
-    .then((res) => {
-      if (!res.data) {
-        message.warning('用户名密码错误')
-        triggerErrorShake()
-        return
-      }
-
-      if (yantext.value === yanma.value) {
-        successBurst()
-
-        if (username.value === 'user1') {
-          message.success('管理员登录成功')
-          router.push({ path: '/User/List' })
-        } else {
-          message.success('登录成功')
-          result.value = res.data
-          router.push({
-            path: '/Home_logined',
-            query: {
-              user: JSON.stringify(result.value)
-            }
-          })
-        }
-      } else {
-        message.warning('验证失败')
-        triggerErrorShake()
-        drawCaptcha()
-        yantext.value = ''
-      }
-    })
-    .catch(() => {
-      message.error('登录请求失败，请稍后重试')
-      triggerErrorShake()
-    })
-    .finally(() => {
-      loading.value = false
-    })
-}
-
-function drawCaptcha() {
-  const canvas = captchaCanvasRef.value
-  if (!canvas) return
-
-  const canvasWidth = canvas.clientWidth
-  const canvasHeight = canvas.clientHeight
-  const context = canvas.getContext('2d')
-
-  canvas.width = canvasWidth
-  canvas.height = canvasHeight
-
-  const sCode = '1,2,3,4,5,6,7,8,9,0'
-  const aCode = sCode.split(',')
-  const aLength = aCode.length
-
-  context.clearRect(0, 0, canvasWidth, canvasHeight)
-
-  const bg = context.createLinearGradient(0, 0, canvasWidth, canvasHeight)
-  bg.addColorStop(0, '#ffd8b8')
-  bg.addColorStop(1, '#ffcca1')
-  context.fillStyle = bg
-  context.fillRect(0, 0, canvasWidth, canvasHeight)
-
-  for (let i = 0; i <= 3; i++) {
-    const j = Math.floor(Math.random() * aLength)
-    const deg = (Math.random() * 30 * Math.PI) / 180
-    const txt = aCode[j]
-    show_num[i] = txt
-
-    const x = 12 + i * 22
-    const y = 24 + Math.random() * 8
-
-    context.font = 'bold 22px Arial'
-    context.translate(x, y)
-    context.rotate(deg)
-    context.fillStyle = randomColor()
-    context.fillText(txt, 0, 0)
-    context.rotate(-deg)
-    context.translate(-x, -y)
-  }
-
-  for (let i = 0; i <= 5; i++) {
-    context.strokeStyle = 'rgba(135, 92, 62, 0.55)'
-    context.beginPath()
-    context.moveTo(Math.random() * canvasWidth, Math.random() * canvasHeight)
-    context.lineTo(Math.random() * canvasWidth, Math.random() * canvasHeight)
-    context.closePath()
-    context.stroke()
-  }
-
-  for (let i = 0; i <= 30; i++) {
-    context.strokeStyle = randomColor()
-    context.beginPath()
-    const x = Math.random() * canvasWidth
-    const y = Math.random() * canvasHeight
-    context.arc(x, y, 1, 0, 2 * Math.PI)
-    context.closePath()
-    context.stroke()
-  }
-
-  yanma.value = show_num.join('')
-  return show_num
-}
-
-function randomColor() {
-  const r = Math.floor(Math.random() * 256)
-  const g = Math.floor(Math.random() * 256)
-  const b = Math.floor(Math.random() * 256)
-  return `rgb(${r},${g},${b})`
-}
 
 function initScene() {
   resizeParticleCanvas()
@@ -435,7 +233,9 @@ function renderScene(time = 0) {
   drawGrid(time)
   drawParticles()
 
-  particleAnimationId = requestAnimationFrame(renderScene)
+  if (!prefersReducedMotion) {
+    particleAnimationId = requestAnimationFrame(renderScene)
+  }
 }
 
 function onPointerMove(e) {
@@ -454,7 +254,7 @@ function onPointerLeave() {
 </script>
 
 <template>
-  <div ref="pageRef" class="login-page">
+  <div ref="pageRef" class="auth-page">
     <canvas ref="particleCanvasRef" class="particle-canvas"></canvas>
 
     <div class="scene-grid-overlay"></div>
@@ -464,98 +264,17 @@ function onPointerLeave() {
     <div class="scene-breath"></div>
     <div class="scene-vignette"></div>
 
-    <div class="login-center">
-      <section
-        ref="cardRef"
-        class="glass-card"
-        :class="{ 'is-error': errorShake }"
-      >
+    <div class="auth-center">
+      <section class="glass-card" :class="{ 'is-error': errorShake }" :style="cardStyle">
         <div class="glass-card-border"></div>
 
         <div class="glass-card-inner">
-          <div class="login-badge">DianDian Life</div>
+          <div v-if="badge" class="auth-badge">{{ badge }}</div>
+          <h1 class="auth-title">{{ title }}</h1>
+          <p v-if="subtitle" class="auth-subtitle">{{ subtitle }}</p>
 
-          <h1 class="login-title">点点生活登录</h1>
-          <p class="login-subtitle">欢迎回来，请输入账号信息继续访问</p>
-
-          <a-form class="login-form" layout="vertical" @submit.prevent="login">
-            <div class="login-form-item">
-              <label class="login-label">账号</label>
-              <div class="neon-field">
-                <div class="field-inner">
-                  <input
-                    v-model="username"
-                    class="native-input"
-                    type="text"
-                    placeholder="请输入账号"
-                    autocomplete="username"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div class="login-form-item">
-              <label class="login-label">密码</label>
-              <div class="neon-field password-wrap">
-                <div class="field-inner">
-                  <input
-                    v-model="password"
-                    class="native-input native-input--password"
-                    :type="showPassword ? 'text' : 'password'"
-                    placeholder="请输入密码"
-                    autocomplete="current-password"
-                  />
-                </div>
-                <button class="toggle-btn" type="button" @click="togglePassword">
-                  {{ showPassword ? '隐藏' : '显示' }}
-                </button>
-              </div>
-            </div>
-
-            <div class="login-form-item">
-              <label class="login-label">验证码</label>
-              <div class="captcha-row">
-                <div class="neon-field neon-field--captcha">
-                  <div class="field-inner">
-                    <input
-                      v-model="yantext"
-                      class="native-input"
-                      type="text"
-                      placeholder="请输入验证码"
-                    />
-                  </div>
-                </div>
-
-                <canvas
-                  ref="captchaCanvasRef"
-                  class="captcha-canvas"
-                  @click="drawCaptcha"
-                ></canvas>
-              </div>
-            </div>
-
-            <div class="login-form-item">
-              <button
-                ref="loginBtnRef"
-                type="button"
-                class="login-btn"
-                :disabled="loading"
-                @click="login"
-              >
-                <span class="login-btn-bg"></span>
-                <span class="login-btn-text">
-                  {{ loading ? '登录中...' : '登录' }}
-                </span>
-              </button>
-            </div>
-          </a-form>
-
-          <div class="login-footer">
-            <span>还没有账号，请</span>
-            <router-link :to="{ path: '/UserRegister' }" class="register-link">
-              注册
-            </router-link>
-          </div>
+          <slot></slot>
+          <slot name="footer"></slot>
         </div>
       </section>
     </div>
@@ -570,7 +289,7 @@ function onPointerLeave() {
   margin: 0;
 }
 
-.login-page {
+.auth-page {
   --text-main: #5a433b;
   --text-sub: rgba(91, 70, 61, 0.7);
   --field-text: #5d463d;
@@ -690,18 +409,17 @@ function onPointerLeave() {
   background: radial-gradient(circle at center, transparent 52%, rgba(180, 120, 95, 0.08) 100%);
 }
 
-.login-center {
+.auth-center {
   position: relative;
   z-index: 3;
   min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: 32px 24px;
 }
 
 .glass-card {
   position: relative;
-  width: min(92vw, 460px);
   border-radius: 28px;
   overflow: hidden;
   background: linear-gradient(
@@ -718,6 +436,7 @@ function onPointerLeave() {
     inset 0 1px 0 rgba(255, 255, 255, 0.92);
   transform-style: preserve-3d;
   will-change: transform;
+  animation: cardEnter 0.85s cubic-bezier(0.215, 0.61, 0.355, 1) both;
 }
 
 .glass-card-border {
@@ -737,7 +456,7 @@ function onPointerLeave() {
   padding: 34px 28px 28px;
 }
 
-.login-badge {
+.auth-badge {
   display: inline-flex;
   align-items: center;
   padding: 6px 12px;
@@ -751,7 +470,7 @@ function onPointerLeave() {
   border: 1px solid rgba(255, 208, 191, 0.92);
 }
 
-.login-title {
+.auth-title {
   margin: 0;
   font-size: 30px;
   line-height: 1.2;
@@ -760,19 +479,23 @@ function onPointerLeave() {
   text-shadow: 0 2px 10px rgba(255, 220, 200, 0.34);
 }
 
-.login-subtitle {
+.auth-subtitle {
   margin: 10px 0 24px;
   color: var(--text-sub);
   font-size: 14px;
 }
 
-.login-form {
+:deep(.auth-form) {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.login-label {
+:deep(.auth-form-item) {
+  width: 100%;
+}
+
+:deep(.auth-label) {
   display: block;
   margin-bottom: 8px;
   color: rgba(91, 70, 61, 0.88);
@@ -780,7 +503,20 @@ function onPointerLeave() {
   font-weight: 600;
 }
 
-.neon-field {
+:deep(.form-grid) {
+  display: grid;
+  gap: 16px;
+}
+
+:deep(.form-grid--double) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+:deep(.form-span-2) {
+  grid-column: span 2;
+}
+
+:deep(.neon-field) {
   position: relative;
   overflow: hidden;
   padding: 1px;
@@ -797,7 +533,7 @@ function onPointerLeave() {
     0 4px 14px rgba(255, 214, 196, 0.08);
 }
 
-.neon-field::before {
+:deep(.neon-field::before) {
   content: '';
   position: absolute;
   inset: -1px;
@@ -816,29 +552,28 @@ function onPointerLeave() {
   pointer-events: none;
 }
 
-.neon-field:focus-within {
+:deep(.neon-field:focus-within) {
   transform: translateY(-1px) scale(1.01);
   box-shadow:
     0 0 0 1px rgba(255, 191, 168, 0.42),
     0 12px 24px rgba(255, 203, 182, 0.22);
 }
 
-.neon-field:focus-within::before {
+:deep(.neon-field:focus-within::before) {
   opacity: 1;
 }
 
-.field-inner {
+:deep(.field-inner) {
   position: relative;
   z-index: 2;
   border-radius: 16px;
 }
 
-.native-input {
+:deep(.native-input),
+:deep(.native-textarea) {
   position: relative;
   z-index: 2;
   width: 100%;
-  height: 52px;
-  padding: 0 16px;
   border: none;
   outline: none;
   border-radius: 16px;
@@ -854,35 +589,50 @@ function onPointerLeave() {
     transform 0.25s ease;
 }
 
-.native-input::placeholder {
+:deep(.native-input) {
+  height: 52px;
+  padding: 0 16px;
+}
+
+:deep(.native-textarea) {
+  min-height: 116px;
+  padding: 14px 16px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.6;
+}
+
+:deep(.native-input::placeholder),
+:deep(.native-textarea::placeholder) {
   color: var(--field-placeholder);
 }
 
-.neon-field:focus-within .native-input {
+:deep(.neon-field:focus-within .native-input),
+:deep(.neon-field:focus-within .native-textarea) {
   background: rgba(255, 255, 255, 0.98);
   color: #4f3d36;
   box-shadow: inset 0 0 0 1px rgba(255, 196, 170, 0.18);
 }
 
-.native-input:-webkit-autofill,
-.native-input:-webkit-autofill:hover,
-.native-input:-webkit-autofill:focus,
-.native-input:-webkit-autofill:active {
+:deep(.native-input:-webkit-autofill),
+:deep(.native-input:-webkit-autofill:hover),
+:deep(.native-input:-webkit-autofill:focus),
+:deep(.native-input:-webkit-autofill:active) {
   -webkit-text-fill-color: #5d463d !important;
   box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.92) inset !important;
   transition: background-color 9999s ease-in-out 0s;
   border-radius: 16px;
 }
 
-.password-wrap {
+:deep(.password-wrap) {
   position: relative;
 }
 
-.native-input--password {
+:deep(.native-input--password) {
   padding-right: 72px;
 }
 
-.toggle-btn {
+:deep(.toggle-btn) {
   position: absolute;
   right: 14px;
   top: 50%;
@@ -896,27 +646,14 @@ function onPointerLeave() {
   font-weight: 600;
 }
 
-.captcha-row {
+:deep(.captcha-row) {
   display: grid;
   grid-template-columns: 1fr 108px;
   gap: 12px;
   align-items: center;
 }
 
-.neon-field--captcha {
-  min-width: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.97),
-    rgba(255, 248, 242, 0.94)
-  );
-}
-
-.neon-field--captcha .native-input::placeholder {
-  color: rgba(113, 88, 79, 0.58);
-}
-
-.captcha-canvas {
+:deep(.captcha-canvas) {
   width: 108px;
   height: 52px;
   border-radius: 14px;
@@ -928,7 +665,64 @@ function onPointerLeave() {
     0 8px 20px rgba(255, 182, 145, 0.22);
 }
 
-.login-btn {
+:deep(.upload-panel) {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 84px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px dashed rgba(226, 154, 115, 0.4);
+}
+
+:deep(.upload-entry) {
+  display: inline-flex;
+}
+
+:deep(.upload-entry .el-upload) {
+  display: inline-flex;
+}
+
+:deep(.upload-preview),
+:deep(.upload-placeholder) {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, rgba(255, 240, 231, 0.95), rgba(255, 228, 211, 0.9));
+  border: 1px solid rgba(255, 191, 168, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+}
+
+:deep(.upload-preview img) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+:deep(.upload-icon) {
+  font-size: 24px;
+  color: #d4876d;
+}
+
+:deep(.upload-copy) {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: rgba(91, 70, 61, 0.72);
+  font-size: 13px;
+}
+
+:deep(.upload-copy strong) {
+  color: rgba(91, 70, 61, 0.9);
+  font-size: 14px;
+}
+
+:deep(.auth-btn) {
   position: relative;
   width: 100%;
   height: 54px;
@@ -941,18 +735,17 @@ function onPointerLeave() {
   font-weight: 700;
   background: transparent;
   transform: translate3d(0, 0, 0);
-  will-change: transform;
   box-shadow:
     0 14px 28px rgba(255, 168, 140, 0.26),
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
-.login-btn:disabled {
+:deep(.auth-btn:disabled) {
   opacity: 0.78;
   cursor: not-allowed;
 }
 
-.login-btn-bg {
+:deep(.auth-btn-bg) {
   position: absolute;
   inset: 0;
   background: linear-gradient(
@@ -967,7 +760,7 @@ function onPointerLeave() {
   animation: flowGradient 3.8s linear infinite;
 }
 
-.login-btn-bg::after {
+:deep(.auth-btn-bg::after) {
   content: '';
   position: absolute;
   inset: 0;
@@ -981,25 +774,29 @@ function onPointerLeave() {
   animation: shineMove 2.8s ease-in-out infinite;
 }
 
-.login-btn-text {
+:deep(.auth-btn-text) {
   position: relative;
   z-index: 2;
 }
 
-.login-footer {
+:deep(.auth-footer) {
   margin-top: 18px;
   text-align: center;
   color: rgba(91, 70, 61, 0.68);
 }
 
-.register-link {
+:deep(.auth-footer--compact) {
+  margin-top: 8px;
+}
+
+:deep(.auth-link) {
   margin-left: 4px;
   color: #d9826a;
   text-decoration: none;
   font-weight: 600;
 }
 
-.register-link:hover {
+:deep(.auth-link:hover) {
   color: #f09a86;
 }
 
@@ -1007,10 +804,21 @@ function onPointerLeave() {
   animation: shakeX 0.48s ease;
 }
 
-.is-error .neon-field {
+.is-error :deep(.neon-field) {
   box-shadow:
     0 0 0 1px rgba(255, 106, 106, 0.28),
     0 10px 22px rgba(255, 140, 140, 0.16);
+}
+
+@keyframes cardEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes flowGradient {
@@ -1032,7 +840,8 @@ function onPointerLeave() {
 }
 
 @keyframes shakeX {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateX(0);
   }
   20% {
@@ -1050,7 +859,8 @@ function onPointerLeave() {
 }
 
 @keyframes floatBlob {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate3d(0, 0, 0) scale(1);
   }
   50% {
@@ -1068,7 +878,8 @@ function onPointerLeave() {
 }
 
 @keyframes breathGlow {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1) translate3d(0, 0, 0);
     opacity: 0.72;
   }
@@ -1078,21 +889,36 @@ function onPointerLeave() {
   }
 }
 
+@media (max-width: 768px) {
+  :deep(.form-grid--double) {
+    grid-template-columns: 1fr;
+  }
+
+  :deep(.form-span-2) {
+    grid-column: auto;
+  }
+}
+
 @media (max-width: 640px) {
   .glass-card-inner {
     padding: 26px 18px 20px;
   }
 
-  .login-title {
+  .auth-title {
     font-size: 24px;
   }
 
-  .captcha-row {
+  :deep(.captcha-row) {
     grid-template-columns: 1fr;
   }
 
-  .captcha-canvas {
+  :deep(.captcha-canvas) {
     width: 100%;
+  }
+
+  :deep(.upload-panel) {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
@@ -1100,14 +926,15 @@ function onPointerLeave() {
   .scene-aurora,
   .scene-scanlines::after,
   .scene-breath,
-  .login-btn-bg,
-  .login-btn-bg::after,
+  .glass-card,
+  :deep(.auth-btn-bg),
+  :deep(.auth-btn-bg::after),
   .is-error {
     animation: none;
   }
 
-  .neon-field,
-  .login-btn,
+  :deep(.neon-field),
+  :deep(.auth-btn),
   .glass-card {
     transition: none !important;
   }

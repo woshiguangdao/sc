@@ -1,31 +1,32 @@
-<script setup>
-import { onMounted } from "vue";
-import { useRouter } from "vue-router";
-import {ref} from "vue";
-import axios from "axios";
-import {ElMessage} from "element-plus";
-import { BusRegister} from "@/api/api";
-import {Plus} from "@element-plus/icons-vue";
+﻿<script setup>
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
+import { BusRegister } from '@/api/api'
+import AuthShell from './components/AuthShell.vue'
 
-const router = useRouter();
+const router = useRouter()
+
 const name = ref('')
 const description = ref('')
-const location = ref("")
-const businessType = ref("");
-const contact= ref("");
-const openingHours= ref("");
-const coverImage= ref("");
+const location = ref('')
+const businessType = ref('')
+const contact = ref('')
+const openingHours = ref('')
+const coverImage = ref('')
 const imageUrl = ref('')
+const yanma = ref('')
+const yantext = ref('')
+const errorShake = ref(false)
+const captchaCanvasRef = ref(null)
 
-const yanma = ref("");
-// 绑定验证码
-const yantext = ref("");
-//验证码图形生成
-var show_num = [];
+const show_num = []
+
 onMounted(() => {
-  draw();
-});
-// 注册函数
+  draw()
+})
+
 const register = () => {
   const business = {
     name: name.value,
@@ -34,457 +35,295 @@ const register = () => {
     businessType: businessType.value,
     contact: contact.value,
     openingHours: openingHours.value,
-    coverImage:coverImage.value
-  };
+    coverImage: coverImage.value
+  }
 
-  // 添加空值判断
-  if (!business.name || !business.description || !business.location || !business.businessType || !business.contact || !business.openingHours || !business.coverImage) {
+  if (
+    !business.name ||
+    !business.description ||
+    !business.location ||
+    !business.businessType ||
+    !business.contact ||
+    !business.openingHours ||
+    !business.coverImage
+  ) {
     ElMessage({
       message: '任何一项都不能为空',
-      type: 'warning',
-    });
-    return; // 退出函数，不继续执行后续逻辑
+      type: 'warning'
+    })
+    triggerErrorShake()
+    return
   }
 
   if (yantext.value === yanma.value) {
-    // 调用注册接口
-    BusRegister(business).then(res => {
-      // 这里的res是封装之后的结果，表示后端返回的json数据
+    BusRegister(business).then((res) => {
       if (!res.data) {
-        // 用户名被占用
         ElMessage({
           message: '该商家名已被使用',
-          type: 'warning',
-        });
+          type: 'warning'
+        })
+        triggerErrorShake()
       } else {
         ElMessage({
-          message: '商家注册成功',
-          type: 'success',
-        });
-        router.push({ path: '/Login' });
+          message: '商户注册成功',
+          type: 'success'
+        })
+        router.push({ path: '/Login' })
       }
-    });
+    })
   } else {
-    // 验证码错误
     ElMessage({
       message: '验证失败',
-      type: 'warning',
-    });
-    draw();
-    yantext.value = "";
+      type: 'warning'
+    })
+    triggerErrorShake()
+    draw()
+    yantext.value = ''
   }
 }
 
 const handleAvatarSuccess = (response, uploadFile) => {
   imageUrl.value = URL.createObjectURL(uploadFile.raw)
-  coverImage.value = response.data.url  //将返回的URL赋值给coverImage
+  coverImage.value = response.data.url
+}
+
+function triggerErrorShake() {
+  errorShake.value = false
+  requestAnimationFrame(() => {
+    errorShake.value = true
+    setTimeout(() => {
+      errorShake.value = false
+    }, 520)
+  })
 }
 
 function draw() {
-  // jquery对canvas对象无法获取，原生js可以解决
-  var canvas_width = document.getElementById("canvas").clientWidth;
-  var canvas_height = document.getElementById("canvas").clientHeight;
-  var canvas = document.getElementById("canvas");
-  var context = canvas.getContext("2d");
+  const canvas = captchaCanvasRef.value
+  if (!canvas) return
 
-  // 画布范围
-  canvas.width = canvas_width;
-  canvas.height = canvas_height;
+  const canvasWidth = canvas.clientWidth
+  const canvasHeight = canvas.clientHeight
+  const context = canvas.getContext('2d')
 
-  // 字符集
-  var sCode = "1,2,3,4,5,6,7,8,9,0";
-  var aCode = sCode.split(",");
-  var aLength = aCode.length;
+  canvas.width = canvasWidth
+  canvas.height = canvasHeight
 
-  for (var i = 0; i <= 3; i++) {
-    var j = Math.floor(Math.random() * aLength);
-    var deg = (Math.random() * 30 * Math.PI) / 180;
-    var txt = aCode[j];
-    show_num[i] = txt;
-    var x = 10 + i * 20;
-    var y = 20 + Math.random() * 8;
-    context.font = "23px 微软雅黑";
-    context.translate(x, y);
-    context.rotate(deg);
-    context.fillStyle = '#000000';
-    context.fillText(txt, 0, 0);
-    context.rotate(-deg);
-    context.translate(-x, -y);
+  const sCode = '1,2,3,4,5,6,7,8,9,0'
+  const aCode = sCode.split(',')
+  const aLength = aCode.length
+
+  context.clearRect(0, 0, canvasWidth, canvasHeight)
+
+  const bg = context.createLinearGradient(0, 0, canvasWidth, canvasHeight)
+  bg.addColorStop(0, '#ffd8b8')
+  bg.addColorStop(1, '#ffcca1')
+  context.fillStyle = bg
+  context.fillRect(0, 0, canvasWidth, canvasHeight)
+
+  for (let i = 0; i <= 3; i++) {
+    const j = Math.floor(Math.random() * aLength)
+    const deg = (Math.random() * 30 * Math.PI) / 180
+    const txt = aCode[j]
+    show_num[i] = txt
+
+    const x = 12 + i * 22
+    const y = 24 + Math.random() * 8
+
+    context.font = 'bold 22px Arial'
+    context.translate(x, y)
+    context.rotate(deg)
+    context.fillStyle = randomColor()
+    context.fillText(txt, 0, 0)
+    context.rotate(-deg)
+    context.translate(-x, -y)
   }
 
-  // 干扰线
-  for (var i = 0; i <= 5; i++) {
-    context.strokeStyle = randomColor();
-    context.beginPath();
-    context.moveTo(Math.random() * canvas_width, Math.random() * canvas_height);
-    context.lineTo(Math.random() * canvas_width, Math.random() * canvas_height);
-    context.closePath();
-    context.stroke();
+  for (let i = 0; i <= 5; i++) {
+    context.strokeStyle = 'rgba(135, 92, 62, 0.55)'
+    context.beginPath()
+    context.moveTo(Math.random() * canvasWidth, Math.random() * canvasHeight)
+    context.lineTo(Math.random() * canvasWidth, Math.random() * canvasHeight)
+    context.closePath()
+    context.stroke()
   }
 
-  // 小点
-  for (var i = 0; i <= 30; i++) {
-    context.strokeStyle = randomColor();
-    context.beginPath();
-    var x = Math.random() * canvas_width;
-    var y = Math.random() * canvas_height;
-    context.arc(x, y, 1, 0, 2 * Math.PI);
-    context.closePath();
-    context.stroke();
+  for (let i = 0; i <= 30; i++) {
+    context.strokeStyle = randomColor()
+    context.beginPath()
+    const x = Math.random() * canvasWidth
+    const y = Math.random() * canvasHeight
+    context.arc(x, y, 1, 0, 2 * Math.PI)
+    context.closePath()
+    context.stroke()
   }
 
-  // 生成随机颜色的函数
-  function randomColor() {
-    var r = Math.floor(Math.random() * 256);
-    var g = Math.floor(Math.random() * 256);
-    var b = Math.floor(Math.random() * 256);
-    return `rgb(${r},${g},${b})`;
-  }
+  yanma.value = show_num.join('')
+}
 
-  yanma.value = show_num.join("");
-  return show_num;
+function randomColor() {
+  const r = Math.floor(Math.random() * 256)
+  const g = Math.floor(Math.random() * 256)
+  const b = Math.floor(Math.random() * 256)
+  return `rgb(${r},${g},${b})`
 }
 </script>
 
 <template>
-
-  <div class="loginVideo">
-    <div class="loginBox">
-      <!-- 注册框 -->
-      <div class="container">
-        <div class="drop">
-          <div class="content">
-            <h2 :style="{ color: '#EFCB86' }">点点生活商户注册</h2>
-            <form>
-              <div class="inputBox">
-                <input type="text"
-                       v-model="name"
-                       clearable
-                       placeholder="请输入商家名"
-                />
-              </div>
-              <div class="inputBox">
-                <input type="text"
-                       clearable
-                       v-model="description"
-                       placeholder="请输入对应的描述"
-                       show-password
-                />
-              </div>
-              <div class="inputBox">
-                <input type="text"
-                       clearable
-                       v-model="location"
-                       placeholder="请输入店铺位置"
-                       show-password
-                />
-              </div>
-              <div class="inputBox">
-                <input type="text"
-                       clearable
-                       v-model="businessType"
-                       placeholder="请输入商家类型"
-                       show-password
-                />
-              </div>
-              <div class="inputBox">
-                <input type="text"
-                       clearable
-                       v-model="contact"
-                       placeholder="请输入联系电话"
-                       show-password
-                />
-              </div>
-              <div class="inputBox">
-                <input type="text"
-                       clearable
-                       v-model="openingHours"
-                       placeholder="请输入营业时间"
-                       show-password
-                />
-              </div>
-              <div style="display: flex; align-items: center;height: 60px">
-                <span style="margin-right: 10px;">描述图片</span>
-                <el-upload
-                    class="avatar-uploader"
-                    action="/api/file/upload"
-                    :show-file-list="false"
-                    :on-success="handleAvatarSuccess"
-                >
-                  <img v-if="imageUrl" :src="imageUrl" style="width: 50px; height: 50px; object-fit: cover;" class="avatar"/>
-                  <el-icon v-else class="avatar-uploader-icon"><Plus/></el-icon>
-                </el-upload>
-              </div>
-              <div class="inputBox" id="yanzheng">
-                <input type="text" v-model="yantext" placeholder="验证码" />
-                <div>
-                  <canvas id="canvas" class="canvascs" @click="draw()">
-                  </canvas>
-                </div>
-              </div>
-              <div class="inputBox" :style="{ margin: '0 auto' }">
-                <el-button type="primary" @click="register" style="background-color: #EFCB86;border-color: #EFCB86;">注册</el-button>
-              </div>
-            </form>
-            <div style="text-align: center; margin-top: 10px;">
-              <span>返回</span>
-              <router-link :to="{ path: '/UserRegister' }" style="color: #EFCB86; margin-left: 4px;text-decoration: none;">用户注册</router-link>
+  <AuthShell
+    title="点点生活商户注册"
+    subtitle="完善商户资料后即可提交入驻，封面上传与验证码逻辑保持原有流程"
+    card-width="620px"
+    :error-shake="errorShake"
+  >
+    <form class="auth-form" @submit.prevent="register">
+      <div class="form-grid form-grid--double">
+        <div class="auth-form-item">
+          <label class="auth-label">商户名称</label>
+          <div class="neon-field">
+            <div class="field-inner">
+              <input
+                v-model="name"
+                class="native-input"
+                type="text"
+                placeholder="请输入商户名"
+              />
             </div>
           </div>
         </div>
+
+        <div class="auth-form-item">
+          <label class="auth-label">商户类型</label>
+          <div class="neon-field">
+            <div class="field-inner">
+              <input
+                v-model="businessType"
+                class="native-input"
+                type="text"
+                placeholder="请输入商户类型"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="auth-form-item form-span-2">
+          <label class="auth-label">商户描述</label>
+          <div class="neon-field">
+            <div class="field-inner">
+              <textarea
+                v-model="description"
+                class="native-textarea"
+                placeholder="请输入商户描述"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="auth-form-item form-span-2">
+          <label class="auth-label">店铺位置</label>
+          <div class="neon-field">
+            <div class="field-inner">
+              <input
+                v-model="location"
+                class="native-input"
+                type="text"
+                placeholder="请输入店铺位置"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="auth-form-item">
+          <label class="auth-label">联系电话</label>
+          <div class="neon-field">
+            <div class="field-inner">
+              <input
+                v-model="contact"
+                class="native-input"
+                type="text"
+                placeholder="请输入联系电话"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="auth-form-item">
+          <label class="auth-label">营业时间</label>
+          <div class="neon-field">
+            <div class="field-inner">
+              <input
+                v-model="openingHours"
+                class="native-input"
+                type="text"
+                placeholder="请输入营业时间"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="auth-form-item form-span-2">
+          <label class="auth-label">封面图片</label>
+          <div class="upload-panel">
+            <el-upload
+              class="upload-entry"
+              action="/api/file/upload"
+              :show-file-list="false"
+              :on-success="handleAvatarSuccess"
+            >
+              <div v-if="imageUrl" class="upload-preview">
+                <img :src="imageUrl" alt="商户封面预览" />
+              </div>
+              <div v-else class="upload-placeholder">
+                <el-icon class="upload-icon"><Plus /></el-icon>
+              </div>
+            </el-upload>
+
+            <div class="upload-copy">
+              <strong>上传商户封面</strong>
+              <span>点击左侧区域上传，成功后会自动写入封面地址</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="auth-form-item form-span-2">
+          <label class="auth-label">验证码</label>
+          <div class="captcha-row">
+            <div class="neon-field">
+              <div class="field-inner">
+                <input
+                  v-model="yantext"
+                  class="native-input"
+                  type="text"
+                  placeholder="请输入验证码"
+                />
+              </div>
+            </div>
+
+            <canvas
+              ref="captchaCanvasRef"
+              class="captcha-canvas"
+              @click="draw"
+            ></canvas>
+          </div>
+        </div>
+
+        <div class="auth-form-item form-span-2">
+          <button type="submit" class="auth-btn">
+            <span class="auth-btn-bg"></span>
+            <span class="auth-btn-text">提交注册</span>
+          </button>
+        </div>
       </div>
-    </div>
-  </div>
+    </form>
+
+    <template #footer>
+      <div class="auth-footer">
+        <span>已有账号，请</span>
+        <router-link :to="{ path: '/Login' }" class="auth-link">登录</router-link>
+      </div>
+      <div class="auth-footer auth-footer--compact">
+        <span>返回普通账号注册？</span>
+        <router-link :to="{ path: '/UserRegister' }" class="auth-link">用户注册</router-link>
+      </div>
+    </template>
+  </AuthShell>
 </template>
-
-<style scoped>
-.loginVideo {
-  width: 100%;
-  height: 100vh;
-  overflow: hidden;
-  position: relative;
-}
-
-/* 验证码样式 */
-.canvascs {
-  width: 92px;
-  height: 30px;
-  border-radius: 5px;
-  margin-top: 2px;
-  background: white;
-  margin-left: 5px;
-}
-
-#yanzheng {
-  display: flex;
-  width: 130px;
-}
-
-#yanzheng div {
-  width: 96px;
-  /* background: pink; */
-}
-
-#yanzheng input {
-  width: 100px;
-}
-
-video {
-  height: 100%;
-  width: 100%;
-  object-fit: cover;
-  object-position: center;
-}
-
-.loginBox {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-/* 登录框 */
-.container .drop {
-  position: relative;
-  width: 500px;
-  height: 800px;
-  box-shadow: inset 20px 20px 20px rgba(0, 0, 0, 0.05),
-  25px 35px 20px rgba(0, 0, 0, 0.05), 25px 30px 30px rgba(0, 0, 0, 0.05),
-  inset -20px -20px 25px rgba(255, 255, 255, 0.9);
-  transition: 0.5s;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-radius: 50%;
-}
-
-.container .drop:hover {
-  border-radius: 10%;
-}
-
-.container .drop::before {
-  content: "";
-  position: absolute;
-  top: 50px;
-  left: 85px;
-  width: 35px;
-  height: 35px;
-  border-radius: 50%;
-  background: #fff;
-  opacity: 0.9;
-}
-
-.container .drop::after {
-  content: "";
-  position: absolute;
-  top: 90px;
-  left: 110px;
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  background: #fff;
-  opacity: 0.9;
-}
-
-.container .drop .content {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  /* align-items: center; */
-  flex-direction: column;
-  text-align: center;
-  padding: 40px;
-  gap: 15px;
-}
-
-.container .drop .content h2 {
-  position: relative;
-  color: #333;
-  font-size: 1.5em;
-}
-.loginbody {
-  width: 100%;
-  height: 100%;
-  min-width: 1000px;
-  background-image: url("../assets/xueshan.jpg");
-  background-size: 100% 100%;
-  background-position: center center;
-  overflow: auto;
-  background-repeat: no-repeat;
-  position: fixed;
-  line-height: 100%;
-  padding-top: 150px;
-}
-.container .drop .content form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  justify-content: center;
-  /* align-items: center; */
-}
-
-.container .drop .content form .inputBox {
-  position: relative;
-  width: 225px;
-  box-shadow: inset 2px 5px 10px rgba(0, 0, 0, 0.1),
-  inset -2px -5px 10px rgba(255, 255, 255, 1),
-  15px 15px 10px rgba(0, 0, 0, 0.05), 15px 10px 15px rgba(0, 0, 0, 0.025);
-  border-radius: 25px;
-}
-
-.container .drop .content form .inputBox::before {
-  content: "";
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 65%;
-  height: 5px;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 5px;
-}
-
-.container .drop .content form .inputBox input {
-  border: none;
-  outline: none;
-  background: transparent;
-  width: 100%;
-  font-size: 1em;
-  padding: 10px 15px;
-}
-
-.container .drop .content form .inputBox input[type="submit"] {
-  color: #fff;
-  text-transform: uppercase;
-  font-size: 1em;
-  cursor: pointer;
-  letter-spacing: 0.1em;
-  font-weight: 500;
-}
-
-.container .drop .content form .inputBox:last-child {
-  width: 120px;
-  background: #EFCB86;
-  box-shadow: inset 2px 5px 10px rgba(0, 0, 0, 0.1),
-  15px 15px 10px rgba(0, 0, 0, 0.05), 15px 10px 15px rgba(0, 0, 0, 0.025);
-  transition: 0.5s;
-}
-
-.container .drop .content form .inputBox:last-child:hover {
-  width: 150px;
-}
-
-.btns {
-  position: absolute;
-  right: -120px;
-  bottom: 0;
-  width: 120px;
-  height: 120px;
-  background: #EFCB86;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  text-decoration: none;
-  color: #EFCB86;
-  line-height: 1.2em;
-  letter-spacing: 0.1em;
-  font-size: 0.8em;
-  transition: 0.25s;
-  text-align: center;
-  box-shadow: inset 10px 10px 10px rgba(0, 166, 188, 0.05),
-  15px 25px 10px rgba(0, 166, 188, 0.1), 15px 20px 20px rgba(0, 166, 188, 0.1),
-  inset -10px -10px 15px rgba(0, 166, 188, 0.5);
-  border-radius: 50%;
-}
-
-.btns::before {
-  content: "";
-  position: absolute;
-  top: 15px;
-  left: 30px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #EFCB86;
-  opacity: 0.45;
-}
-
-.btns.signup {
-  bottom: 150px;
-  right: -120px;
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: #EFCB86;
-  box-shadow: inset 10px 10px 10px rgba(0, 166, 188, 0.05),
-  15px 25px 10px rgba(0, 166, 188, 0.1), 15px 20px 20px rgba(0, 166, 188, 0.1),
-  inset -10px -10px 15px rgba(0, 166, 188, 0.5);
-}
-
-.btns.signup::before {
-  left: 20px;
-  width: 15px;
-  height: 15px;
-}
-
-.btns:hover {
-  border-radius: 10%;
-}
-
-.tool {
-  display: flex;
-  justify-content: space-between;
-  color: #606266;
-}
-
-.butt {
-  margin-top: 10px;
-  text-align: center;
-}
-
-.shou {
-  cursor: pointer;
-  color: #606266;
-}
-</style>

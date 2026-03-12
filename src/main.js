@@ -9,6 +9,12 @@ import {createPinia} from "pinia";
 import {createPersistedState} from "pinia-persistedstate-plugin";
 import locale from 'element-plus/dist/locale/zh-cn'
 
+
+import Antd from 'ant-design-vue'
+import 'ant-design-vue/dist/reset.css'
+
+createApp(App).use(Antd).mount('#app')
+
 const app = createApp(App)
 const pinia = createPinia()
 const persistedState = createPersistedState();
